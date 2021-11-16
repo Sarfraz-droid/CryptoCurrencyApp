@@ -1,7 +1,7 @@
 import React, { useRef } from "react";
 import { Line } from "react-chartjs-2";
 
-function Dashboard({ price, data }) {
+function Dashboard({ price }) {
   const opts = {
     tooltips: {
       intersect: false,
@@ -18,7 +18,6 @@ function Dashboard({ price, data }) {
       <h2>{`$${price}`}</h2>
 
       <div className="chart-container">
-        <Line data={data} options={opts} />
       </div>
     </div>
   );

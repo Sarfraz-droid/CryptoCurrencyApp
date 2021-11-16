@@ -18,6 +18,7 @@ export default function App() {
 
     let pairs = [];
 
+    //Filtering Out Data
     const apiCall = async () => {
       await fetch(url + "/products")
         .then((res) => res.json())
@@ -49,8 +50,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!first.current) {
-      
+    if (!first.current) { 
       return;
     }
 
@@ -63,19 +63,6 @@ export default function App() {
     let jsonMsg = JSON.stringify(msg);
     ws.current.send(jsonMsg);
 
-    let historicalDataURL = `${url}/products/${pair}/candles?granularity=86400`;
-    const fetchHistoricalData = async () => {
-      let dataArr = [];
-      await fetch(historicalDataURL)
-        .then((res) => res.json())
-        .then((data) => (dataArr = data));
-      
-      let formattedData = formatData(dataArr);
-      setpastData(formattedData);
-    };
-
-    fetchHistoricalData();
-
     ws.current.onmessage = (e) => {
       let data = JSON.parse(e.data);
       if (data.type !== "ticker") {
@@ -86,6 +73,7 @@ export default function App() {
         setprice(data.price);
       }
     };
+    
   }, [pair]);
 
   const handleSelect = (e) => {
@@ -113,7 +101,7 @@ export default function App() {
           })}
         </select>
       }
-      <Dashboard price={price} data={pastData} />
+      <Dashboard price={price}/>
     </div>
   );
 }
