@@ -1,21 +1,19 @@
 import React, { useState, useEffect, useRef } from "react";
-import Dashboard from "./components/Dashboard";
-import { formatData } from "./utils";
-import "./styles.css";
+import "./index.css";
+
+import ReactAutocomplete from "react-autocomplete";
 
 export default function App() {
-  const [currencies, setcurrencies] = useState([]);
-  const [pair, setpair] = useState("");
-  const [price, setprice] = useState("0.00");
-  const [pastData, setpastData] = useState({});
+  const [pair, setpair] = useState([]);
+  const [price, setprice] = useState([]);
   const ws = useRef(null);
+  const [currencies, setcurrencies] = useState();
 
   let first = useRef(false);
   const url = "https://api.pro.coinbase.com";
 
   useEffect(() => {
     ws.current = new WebSocket("wss://ws-feed.pro.coinbase.com");
-
     let pairs = [];
 
     //Filtering Out Data
@@ -23,24 +21,22 @@ export default function App() {
       await fetch(url + "/products")
         .then((res) => res.json())
         .then((data) => (pairs = data));
-      
+
       let filtered = pairs.filter((pair) => {
         if (pair.quote_currency === "USD") {
           return pair;
         }
       });
 
-      filtered = filtered.sort((a, b) => {
-        if (a.base_currency < b.base_currency) {
-          return -1;
-        }
-        if (a.base_currency > b.base_currency) {
-          return 1;
-        }
-        return 0;
+
+
+      filtered = filtered.map((pair) => {
+        return {
+          label: pair.id,
+        };
       });
 
-      
+
       setcurrencies(filtered);
 
       first.current = true;
@@ -50,58 +46,96 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!first.current) { 
+    if (!first.current) {
       return;
     }
-
-    
+    console.log("I am Here");
+    console.log(pair)
     let msg = {
       type: "subscribe",
-      product_ids: [pair],
-      channels: ["ticker"]
+      product_ids: [...pair],
+      channels: ["ticker"],
     };
     let jsonMsg = JSON.stringify(msg);
     ws.current.send(jsonMsg);
 
     ws.current.onmessage = (e) => {
       let data = JSON.parse(e.data);
+
       if (data.type !== "ticker") {
         return;
       }
 
-      if (data.product_id === pair) {
-        setprice(data.price);
-      }
+      setprice((price) => {
+        return {
+          ...price,
+          [data.product_id]: data.price,
+        };
+      })
     };
-    
   }, [pair]);
 
-  const handleSelect = (e) => {
-    let unsubMsg = {
-      type: "unsubscribe",
-      product_ids: [pair],
-      channels: ["ticker"]
-    };
-    let unsub = JSON.stringify(unsubMsg);
+  useEffect(() => {
+    if (!first.current) {
+      return;
+    }
+    console.log(price);
+  }, [price]);
 
-    ws.current.send(unsub);
+  useEffect(() => {
 
-    setpair(e.target.value);
-  };
+  },[pair])
+
+  const [value, setValue] = useState("");
+
+  function addPair(e){
+    setpair([...pair, value]);
+    setValue("");
+  }
+
   return (
-    <div className="container">
-      {
-        <select name="currency" value={pair} onChange={handleSelect}>
-          {currencies.map((cur, idx) => {
-            return (
-              <option key={idx} value={cur.id}>
-                {cur.display_name}
-              </option>
-            );
-          })}
-        </select>
-      }
-      <Dashboard price={price}/>
+    <div className="flex flex-col  items-center bg-gray-400 h-screen font-body">
+      <div className="m-5 bg-white rounded-full shadow-2xl">
+        <ReactAutocomplete
+          items={currencies}
+          getItemValue={(item) => item.label}
+          shouldItemRender={(item, val) =>
+            item.label.toLowerCase().indexOf(val.toLowerCase()) > -1
+          }
+
+          renderItem={(item, isHighlighted) => (
+            <div style={{ background: isHighlighted ? "lightgray" : "white" }}>
+              {item.label}
+            </div>
+          )}
+
+          wrapperStyle={{
+            display: "inline-block",
+            background: "transparent",
+            border: "none",
+            padding: "0.5rem",
+          }}
+
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onSelect={(val) => setValue(val)}
+        />
+        <button class="p-3 bg-blue-500 text-white font-bold rounded-tr-full rounded-br-full border-2 border-white  hover:border-transparent transition-all" onClick={(e) => addPair()}>Add</button>
+      </div>   
+
+      {pair.map((p) => {
+        return (
+          <div className="w-full px-10 py-5 flex">
+            <div className="text-xl font-bold text-white flex-grow">
+              {p}
+            </div>
+            <div className="text-xl font-bold text-white flex-grow">
+              {price[p]}
+            </div> 
+          </div>
+        )
+      })}
+
     </div>
   );
 }
